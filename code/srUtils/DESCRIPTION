@@ -1,0 +1,18 @@
+Package: srUtils
+Title: Extract text for systematic maps
+Version: 0.0.0.9000
+Authors@R: 
+    person("Julian", "Flowers", , "jrf128@student.aru.ac.uk", role = c("aut", "cre"),
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: Extract coordinates, elevations, locations, air temperature from pdfs or other texts
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.1
+Imports: 
+    dplyr,
+    purrr,
+    readtext,
+    stringr,
+    tibble,
+    tidyr
