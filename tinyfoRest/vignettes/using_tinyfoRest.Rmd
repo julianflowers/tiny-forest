@@ -1,0 +1,80 @@
+---
+title: "Using the `tinyfoRest` package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{using_tinyfoRest}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r load, message = FALSE, warning=FALSE, echo=FALSE}
+
+library(tinyfoRest)
+devtools::install_github("julianflowers/myScrapers")
+needs(tinyfoRest, sf, myScrapers, rvest)
+
+```
+
+## What is the `tinyForestR` package?
+
+The aim of `tinyfoRest` is to provide set of tools designed to extract, manipulate and analyse data relevant to the location of Tiny Forests in the UK.
+
+Specifically it extracts and processes landcover and biodiversity data from a range of sources for a given area around Tiny Forest locations, and provides a set of tools for analysing citizen science data derived directly from Tiny Forests.
+
+Tiny Forests are small scale dense tree plantings usually in urban areas - and are managed by Earthwatch. <https://earthwatch.org.uk/get-involved/tiny-forest>
+
+## Getting started
+
+The package is hosted on Github and is a work in progress. It can be installed by running `devtools::install_github("julianflowers/tinyfoRest")`. It loads another Github package `myScrapers` which is needed to download data from the Tiny Forest website.
+
+The package makes use of a number of Application Programming Interfaces (APIs) some of which require API keys which will need to be applied for separately. This is outlined in the relevant sections of this vignette.
+
+It uses a range of Python packages to access some datasets (in some cases Python packages are better developed than R). For this reason the first step is to run `initialise_tf()` to intialise the package.
+
+This:
+
+-   Loads the `reticulate` package which R uses to talk to Python
+
+-   Sets up a Python virtual environment (VE) called `tinyfoRest`, and ensures R uses the correct version of Python by specifying the `RETICULATE_PYTHON` environment variable. It may be necessary to restart R to make sure R correctly uses this.
+
+-   You will be asked if you want to remove the `tinyforest` environment. Say "no" unless you have a previous installation and are having trouble. It will create a clean install of the VE.
+
+-   Installs a number of Python packages to the `tinyforest` environment. These include
+
+    -   `earthengine-api` which enables access to Google Earth Engine (GEE)
+
+    -   `geemap` - a set of added value tools to extract and manipulate GEE data
+
+    -   `osdatahub` - access to Ordnance Survey National Geographic Database data.
+
+    -   `OSGridConverter` - converts lat-longs to UK Grid references
+
+-   Imports the relevant modules for use in other packages
+
+### Install and initialise
+
+First install and load the package.
+
+
+```{r}
+#| cache: true
+
+initialise_tf()
+
+```
+
+We can now run the `get_tf_data` function which scrapes the Tiny Forest sites web pages.
+
+```{r, tf_data}
+
+tf_data <- get_tf_data()
+
+```
+
