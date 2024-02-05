@@ -78,3 +78,358 @@ tf_data <- get_tf_data()
 
 ```
 
+
+Producing a simple map is as simple as loading `tf_data$map`.
+
+
+```{r}
+
+
+tf_data
+tf_data$map
+
+```
+
+
+Or we can draw a more sophisticated static map using `tf_data$tidy_tf_sf`.
+
+```{r}
+
+## load UK boundary files
+uk <- read_sf("https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Countries_December_2022_UK_BGC/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson")
+
+ggplot() +
+  geom_sf(data = uk, fill = "white") +
+  geom_sf(data = tf_data$tidy_tf_sf, pch = 1, aes(colour = factor(year(plant_date)))) +
+  labs(title = "Tiny Forest locations 2024",
+      subtitle = paste("N = ", nrow(tf_data$tidy_tf_sf))) +
+  theme_void() +
+  scale_colour_viridis_d(option = "turbo")
+
+
+```
+
+It is simple to draw time series plots...
+
+```{r}
+
+df <- tf_data$tidy_tf_sf
+
+df |>
+  count(year = year(plant_date)) |>
+  ggplot() +
+  geom_col(aes(year, n)) +
+  geom_label(aes(year, n, label = n)) +
+  labs(title = "TFs planted per year") +
+  theme_minimal() +
+  theme(plot.title.position = "plot")
+  
+
+```
+
+```{r, tf_data2}
+
+```
+
+Once the data is loaded we can save it as a csv file and get some high level information on planting, timings, size and so on.
+
+```{r tf-stats, fig.height=6, fig.width=8}
+
+needs(patchwork)
+
+## annual planting
+
+tf_trees <- df |>
+  mutate(trees_1 = str_split(trees, "\\|")) |>
+  select(-trees) |>
+  unnest("trees_1") 
+
+tf_trees |>
+  group_by(tf_id) |>
+  summarise(n = n()) |>
+  ggplot(aes(n)) +
+  geom_histogram() +
+  labs(title = "Distribution of tree species", 
+       x = "Number of tree species per TF") +
+  theme_minimal() +
+  theme(plot.title.position = "plot")
+
+```
+
+## Tree species
+
+We can also look at planting frequency for different tree species.
+
+```{r fig.height=12}
+
+tf_trees |>
+  ungroup() |>
+  count(trees_1, sort = TRUE) |>
+  top_n(25, n) |>
+  ggplot() +
+  geom_col(aes(n, reorder(trees_1, n))) +
+  labs(y = "", 
+       title = "Most commonly planted tree species", 
+       x = "Number of Tiny Forests") +
+ # ggthemes::theme_base() +
+  theme(plot.title.position = "plot") +
+  theme_minimal() +
+  theme(plot.title.position = "plot")
+  
+
+```
+
+## What do TFs look like?
+
+We can also download an image for a TF via Google Maps. This requires an API key which can be obtained as follows:
+
+<https://developers.google.com/maps/documentation/streetview/cloud-setup>
+
+```{r fig.height=6, fig.width=8}
+library(ggmap);library(magick)
+
+tf_df <- tf_data$tidy_tf
+
+api_key <- Sys.getenv("GOOGLE_MAPS")
+
+image <- tinyForestR::get_tf_images(lon = tf_df$lon[100], lat = tf_df$lat[100], key = api_key, zoom = 20, tf_id = tf_df$tf_id[100])
+
+image_read(image )
+
+```
+
+## Biodiversity data
+
+The `get_nbn_buffer` downloads occurrence data from the NBN Atlas in a set buffer around a given longitude and latitude. For example we can download 30000 records around (Darlington TF). Note: when extracting data from APIs it helps to create a "safe" version of your function espacially if you aare making multiple API calls (see below). The makes sure that your function will keep on running. This is achieved by using the `safely` function which stores the output as a list with 2 variables - `result` and `error`. To get the results we need to extract the `result` vector.
+
+```{r biodiversity-data}
+#| label: biodiversity-data
+#| eval: true
+
+safe_buff <- safely(tinyfoRest::get_nbn_buffer, otherwise = NA_real_)
+
+nbn_data <- safe_buff(tf_df$lon[100], tf_df$lat[100], n = 30000, tf_id = tf_df$tf_id[100])
+nbn_out <- nbn_data$result |>
+  mutate( tf_id = tf_df$tf_id[100])
+
+nbn_out |>
+  filter(year > 2014) |>
+  st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326) |>
+  ggplot() +
+  geom_sf(aes(colour = phylum))
+
+```
+
+For ecological analyses we need to transform the data from long to wide formats. With an NBN atlas extract we can deploy the `create_species_matrix` function we creates a species matrix and a list of sites or observation ids.
+
+For example we can extract a matrix of all insect observations...
+
+```{r}
+
+## create a matrix of observations by class and year
+spp_matrix <- create_species_matrix(nbn_out, class = "Insecta")
+
+
+tf_bd_insects <- calc_bd_metrics(df = nbn_out, class = "Insecta")
+tf_bd_birds <- calc_bd_metrics(df = nbn_out, class = "Aves")
+tf_bd_mammals <- calc_bd_metrics(df = nbn_out, class = "Mammalia")
+
+tf_bd_mammals$metrics
+
+
+```
+
+#### Scaling up
+
+To compare biodiversity across TF areas we can extract NBN data from multiple sites using the `purrr` package. Set `.progress` = TRUE to track the time it takes to run. Note: the NBN atlas API has a 500000 download limit, but it sometimes a bit temperamental.
+
+```{r}
+
+## sample tf_ids
+## 
+
+sample <- sample_n(tf_df, 20)
+output <- map(1:nrow(sample), \(x) safe_buff(lon = sample$lon[x], lat = sample$lat[x], tf_id = sample$tf_id[x], n = 30000), .progress = TRUE)
+
+res <- map(output, "result")
+
+res_1 <- res[which(!is.na(res))]
+
+res_df <- list_rbind(res_1)
+
+```
+
+### Explore data
+
+How many observations per site per year?
+
+We have `r nrow(res_df)` rows of data for `r res_df[["tf_id"]] |> unique() |> length()` sites.
+
+```{r}
+
+sites <- res_df[["site"]] |> unique()
+
+res_counts <- res_df |> 
+  filter(between(year, 2010, 2019)) |>
+  count(site, year) 
+
+res_counts |>
+  ggplot() +
+  geom_line(aes(year, n, group = site), colour = "grey90") +
+  geom_line(aes(year, n, group = site), colour = "red", data = res_counts |> filter(site == sites[2])) +
+  labs( y. = "No of observations", 
+        caption = "Source: NNB API", 
+        x = "Year",
+    title = "Annual NBN observation counts per TF site", 
+       subtitle = paste0("Site ", res_counts |> filter(site == sites[2]) |> select(site) |> slice(1),  " shown as red line")) +
+  theme_minimal() +
+  theme(plot.title.position = "plot") +
+  scale_x_continuous(n.breaks = 10) 
+  
+```
+
+### Split by taxa
+
+```{r}
+
+res_counts_site <- res_df |> 
+  filter(between(year, 2010, 2019), 
+         site == sites[2]) |>
+  count(site, classs, year) |>
+  filter(n > 9) |>
+  ggplot(aes(factor(year), n)) +
+  geom_col() +
+  facet_wrap(~ classs, scales = "free") +
+  scale_x_discrete()
+
+res_counts_site
+
+```
+
+```{r, eval=FALSE}
+|# label: biodiversity-data-large
+|# eval: false
+
+spp_matrix_large <- create_species_matrix(res_df, class = "Insecta")
+
+spp_matrix_large
+
+## convert to presence matrix
+## 
+
+spp_pres <- spp_matrix_large$sp |>
+  mutate_if(is.numeric, \(x) ifelse(x == 0, 0, 1))
+  
+
+```
+
+### Explore data
+
+For some taxa alternative data sources may add additional value. For example data from the 2020 Botanic Society of Britain and Ireland survey may give a more complete plant record for each 1km grid square (see below); and eBIrd data may be more upto data for bird observations.
+
+eBIrd data can be obtained by creating and account on the eBIrd website and completing a request form specifying location and requirements. Once approved the data is made available as a download.
+
+## Plant diversity using BSBI data
+
+I have also included functions to extract data for the 2020 Botanic Society of Britain and Ireland survey. This is publicly available from for UK National Grid 1k monads. This requires conversion of lat-longs to UK grids.
+
+```{r os-to-grid}
+#| label: os-to-grid
+
+grid_ref <- tinyForestR::os_lat_lon_to_grid(lon = sample$lon[2], lat = sample$lat[2])
+
+grid_ref$grid
+
+```
+
+```{r bsbi-data}
+#| label: bsbi-data
+
+bsbi_data <- tinyForestR::get_bsbi_data(grid_ref = grid_ref$grid)
+
+bsbi_data <- bsbi_data |>
+  enframe() |>
+  unnest("value") |>
+  unnest("value") |>
+  mutate(year = str_extract(value, "20\\d{2}"),
+         value = str_remove(value, year),
+         count = parse_number(value),
+         value = str_remove(value, as.character(count)), 
+         value = str_remove(value, "\\d{1,}"), 
+         grid = grid_ref$grid, 
+         tf_id = sample$site[2], 
+         species = str_remove(value, "\\(") ,
+         species = str_remove(species, "\\)"), 
+         species = str_squish(species)) |>
+  arrange(value)  |>
+  drop_na()
+
+```
+
+## Rapid calculation of biodiversity metrics
+
+The `calc_bd_metrics` function takes an output from `get_nbn_buffer` or `get_bsbi_data`, converts the data from long to wide format, creates a species matrix for a specified class (for `get_nbn_buffer` data), and outputs a list containing:
+
+-   diversity metrics (Simpson)
+-   species richness by month (plotted)
+-   Bray-Curtis matrix
+-   Raup matrix
+
+```{r biodiversity-metrics}
+#| label: biodiversity-metrics
+
+metrics <- calc_bd_metrics(df = nbn_data$result, class = "Aves")
+
+
+metrics$metrics |>
+  gt::gt()
+
+```
+
+```{r}
+#| label: biodiversity-metrics-plot
+metrics$plot +
+  labs(title = "Monthly species richness for ",
+         subtitle = paste("Aves", tf_df$site[1]), 
+       y = "Richness", 
+       x = "Month") +
+  theme(plot.title.position = "plot")
+
+```
+
+## Vegetation indices
+
+The package includes a `calc_ndvi_buff` function to enable the calculation of normalized vegetation index (NDVI) for the buffer area around a given point. It uses Sentinel2 surface reflectance satellite images which are available at 10m resolution and are regularly updated. The function extracts images via the Google Earth Engine API and requires registration and authentication prior to use (see...).
+
+The function returns a list including, image dates, NDVI statistics for the image, an interactive map and a raster. Note it may take few minutes to run.
+
+The code chunk below calculates the NDVI for each image containing the buffer around a TF for 2019 and 2022 and maps them side-by-side. (Note, the function selects only those S2 images with cloud cover \< 10%).
+
+```{r ndvi-images, cache=FALSE}
+#| label: ndvi-images
+#| eval: true
+
+plant_date <- sample$plant_date |>
+  unique()
+
+ee <- import("ee")
+geemap <- import("geemap")
+
+
+ee$Initialize()
+
+i <- 10
+
+after <- get_vegetation_indices(tf_id = sites[i], buffer = 30, lon = sample$lon[i], lat = sample$lat[i], start = as.character(sample$plant_date[i]), end = as.character(today() ))
+
+before <- get_vegetation_indices(tf_id = sites[i], buffer = 30, lon = sample$lon[i], lat = sample$lat[i], end = as.character(sample$plant_date[i]), start = as.character(sample$plant_date[i] - 365))
+
+before$sf |>
+  ggplot() +
+  geom_density(aes(GLI)) +
+  geom_density(aes(GLI), data = after$sf, colour = "green") +
+  labs(title = paste(sample$plant_date[i], sites[i])) +
+  theme_minimal()
+
+```
+
