@@ -4,12 +4,12 @@
 \name{tinyfoRest-package}
 \alias{tinyfoRest}
 \alias{tinyfoRest-package}
-\title{tinyfoRest: What the Package Does (One Line, Title Case)}
+\title{tinyfoRest: Get landscape and biodiversity data about Tiny Forests® and surrounding areas}
 \description{
-What the package does (one paragraph).
+Retrieves a range of data about Tiny Forests
 }
 \author{
-\strong{Maintainer}: First Last \email{first.last@example.com} (\href{https://orcid.org/YOUR-ORCID-ID}{ORCID})
+\strong{Maintainer}: Julian Flowers \email{julian.flowers12@gmail.com} (\href{https://orcid.org/YOUR-ORCID-ID}{ORCID})
 
 }
 \keyword{internal}
