@@ -10,14 +10,17 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>", 
+  cache = TRUE
 )
+
+options(rmarkdown.html_vignette.check_title = FALSE)
 ```
 
 ```{r load, message = FALSE, warning=FALSE, echo=FALSE}
 
 library(tinyfoRest)
-devtools::install_github("julianflowers/myScrapers")
+devtools::install_github("julianflowers/myScrapers", force = FALSE)
 needs(tinyfoRest, sf, myScrapers, rvest)
 
 ```
@@ -84,8 +87,6 @@ Producing a simple map is as simple as loading `tf_data$map`.
 
 ```{r}
 
-
-tf_data
 tf_data$map
 
 ```
@@ -127,9 +128,6 @@ df |>
 
 ```
 
-```{r, tf_data2}
-
-```
 
 Once the data is loaded we can save it as a csv file and get some high level information on planting, timings, size and so on.
 
@@ -192,7 +190,7 @@ tf_df <- tf_data$tidy_tf
 
 api_key <- Sys.getenv("GOOGLE_MAPS")
 
-image <- tinyForestR::get_tf_images(lon = tf_df$lon[100], lat = tf_df$lat[100], key = api_key, zoom = 20, tf_id = tf_df$tf_id[100])
+image <- tinyForestR::get_tf_images(lon = tf_df$lon[15], lat = tf_df$lat[15], key = api_key, zoom = 20, tf_id = tf_df$tf_id[15])
 
 image_read(image )
 
@@ -200,7 +198,7 @@ image_read(image )
 
 ## Biodiversity data
 
-The `get_nbn_buffer` downloads occurrence data from the NBN Atlas in a set buffer around a given longitude and latitude. For example we can download 30000 records around (Darlington TF). Note: when extracting data from APIs it helps to create a "safe" version of your function espacially if you aare making multiple API calls (see below). The makes sure that your function will keep on running. This is achieved by using the `safely` function which stores the output as a list with 2 variables - `result` and `error`. To get the results we need to extract the `result` vector.
+The `get_nbn_buffer` downloads occurrence data from the NBN Atlas in a set buffer around a given longitude and latitude. For example we can download 30000 records around (). Note: when extracting data from APIs it helps to create a "safe" version of your function espacially if you aare making multiple API calls (see below). The makes sure that your function will keep on running. This is achieved by using the `safely` function which stores the output as a list with 2 variables - `result` and `error`. To get the results we need to extract the `result` vector.
 
 ```{r biodiversity-data}
 #| label: biodiversity-data
@@ -208,15 +206,15 @@ The `get_nbn_buffer` downloads occurrence data from the NBN Atlas in a set buffe
 
 safe_buff <- safely(tinyfoRest::get_nbn_buffer, otherwise = NA_real_)
 
-nbn_data <- safe_buff(tf_df$lon[100], tf_df$lat[100], n = 30000, tf_id = tf_df$tf_id[100])
+nbn_data <- safe_buff(tf_df$lon[15], tf_df$lat[15], n = 30000, tf_id = tf_df$tf_id[15])
 nbn_out <- nbn_data$result |>
-  mutate( tf_id = tf_df$tf_id[100])
+  mutate( tf_id = tf_df$tf_id[15])
 
 nbn_out |>
   filter(year > 2014) |>
   st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326) |>
-  ggplot() +
-  geom_sf(aes(colour = phylum))
+  select(phylum, classs, year, geometry) |>
+  mapview(zcol = "phylum")
 
 ```
 
@@ -234,7 +232,7 @@ tf_bd_insects <- calc_bd_metrics(df = nbn_out, class = "Insecta")
 tf_bd_birds <- calc_bd_metrics(df = nbn_out, class = "Aves")
 tf_bd_mammals <- calc_bd_metrics(df = nbn_out, class = "Mammalia")
 
-tf_bd_mammals$metrics
+tf_bd_birds$metrics
 
 
 ```
@@ -247,7 +245,7 @@ To compare biodiversity across TF areas we can extract NBN data from multiple si
 
 ## sample tf_ids
 ## 
-
+set.seed(1234)
 sample <- sample_n(tf_df, 20)
 output <- map(1:nrow(sample), \(x) safe_buff(lon = sample$lon[x], lat = sample$lat[x], tf_id = sample$tf_id[x], n = 30000), .progress = TRUE)
 
@@ -418,18 +416,26 @@ geemap <- import("geemap")
 
 ee$Initialize()
 
-i <- 10
+i <- 7
 
 after <- get_vegetation_indices(tf_id = sites[i], buffer = 30, lon = sample$lon[i], lat = sample$lat[i], start = as.character(sample$plant_date[i]), end = as.character(today() ))
 
 before <- get_vegetation_indices(tf_id = sites[i], buffer = 30, lon = sample$lon[i], lat = sample$lat[i], end = as.character(sample$plant_date[i]), start = as.character(sample$plant_date[i] - 365))
 
-before$sf |>
+before_long <- before$sf |>
+  pivot_longer(names_to = "vi", values_to = "vals", cols = 1:6)
+
+after_long <- after$sf |>
+  pivot_longer(names_to = "vi", values_to = "vals", cols = 1:6)
+
+before_long |>
   ggplot() +
-  geom_density(aes(GLI)) +
-  geom_density(aes(GLI), data = after$sf, colour = "green") +
-  labs(title = paste(sample$plant_date[i], sites[i])) +
-  theme_minimal()
+  geom_density(aes(vals)) +
+  geom_density(aes(vals), data = after_long, colour = "green") +
+  labs(title = paste("Plant date = ", sample$plant_date[i], "\nSite = ", sites[i])) +
+  theme_minimal() +
+  theme(plot.title.position = "plot") +
+  facet_wrap(~vi)
 
 ```
 
