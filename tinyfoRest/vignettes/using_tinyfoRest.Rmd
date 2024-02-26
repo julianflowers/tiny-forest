@@ -1,14 +1,15 @@
 ---
 title: "Using the `tinyfoRest` package"
 format: 
-     html: default
+     html: 
+        keep-md: true
 ---
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>", 
-  cache = TRUE
+  cache = FALSE
 )
 
 #options(rmarkdown.html_vignette.check_title = FALSE)
@@ -43,7 +44,7 @@ This:
 
 -   Loads the `reticulate` package which R uses to talk to Python
 
--   Sets up a Python virtual environment (VE) called `tinyfoRest`, and ensures R uses the correct version of Python by specifying the `RETICULATE_PYTHON` environment variable. It may be necessary to restart R to make sure R correctly uses this.
+-   Sets up a Python virtual environment (VE) called `tinyforest`, and ensures R uses the correct version of Python by specifying the `RETICULATE_PYTHON` environment variable. It may be necessary to restart R to make sure R correctly uses this.
 
 -   You will be asked if you want to remove the `tinyforest` environment. Say "no" unless you have a previous installation and are having trouble. It will create a clean install of the VE.
 
