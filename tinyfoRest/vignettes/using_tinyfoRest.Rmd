@@ -1,10 +1,7 @@
 ---
 title: "Using the `tinyfoRest` package"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{using_tinyfoRest}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+format: 
+     html: default
 ---
 
 ```{r setup, include = FALSE}
@@ -14,7 +11,8 @@ knitr::opts_chunk$set(
   cache = TRUE
 )
 
-options(rmarkdown.html_vignette.check_title = FALSE)
+#options(rmarkdown.html_vignette.check_title = FALSE)
+
 ```
 
 ```{r load, message = FALSE, warning=FALSE, echo=FALSE}
@@ -31,7 +29,7 @@ The aim of `tinyfoRest` is to provide set of tools designed to extract, manipula
 
 Specifically it extracts and processes landcover and biodiversity data from a range of sources for a given area around Tiny Forest locations, and provides a set of tools for analysing citizen science data derived directly from Tiny Forests.
 
-Tiny Forests are small scale dense tree plantings usually in urban areas - and are managed by Earthwatch. <https://earthwatch.org.uk/get-involved/tiny-forest>
+Tiny Forests are small scale dense tree plantings usually in urban areas - and are managed by Earthwatch (<https://earthwatch.org.uk/get-involved/tiny-forest>)
 
 ## Getting started
 
@@ -65,7 +63,6 @@ This:
 
 First install and load the package.
 
-
 ```{r}
 #| cache: true
 
@@ -81,16 +78,13 @@ tf_data <- get_tf_data()
 
 ```
 
-
 Producing a simple map is as simple as loading `tf_data$map`.
-
 
 ```{r}
 
 tf_data$map
 
 ```
-
 
 Or we can draw a more sophisticated static map using `tf_data$tidy_tf_sf`.
 
@@ -127,7 +121,6 @@ df |>
   
 
 ```
-
 
 Once the data is loaded we can save it as a csv file and get some high level information on planting, timings, size and so on.
 
@@ -246,7 +239,7 @@ To compare biodiversity across TF areas we can extract NBN data from multiple si
 ## sample tf_ids
 ## 
 set.seed(1234)
-sample <- sample_n(tf_df, 20)
+sample <- sample_n(tf_df, 50)
 output <- map(1:nrow(sample), \(x) safe_buff(lon = sample$lon[x], lat = sample$lat[x], tf_id = sample$tf_id[x], n = 30000), .progress = TRUE)
 
 res <- map(output, "result")
@@ -413,10 +406,10 @@ plant_date <- sample$plant_date |>
 ee <- import("ee")
 geemap <- import("geemap")
 
-
+ee$Authenticate()
 ee$Initialize()
 
-i <- 7
+i <- 1
 
 after <- get_vegetation_indices(tf_id = sites[i], buffer = 30, lon = sample$lon[i], lat = sample$lat[i], start = as.character(sample$plant_date[i]), end = as.character(today() ))
 
@@ -428,6 +421,10 @@ before_long <- before$sf |>
 after_long <- after$sf |>
   pivot_longer(names_to = "vi", values_to = "vals", cols = 1:6)
 
+cbind(before_long, after_long) |>
+    group_by(vi) |>
+    reframe(mae = mean(abs(vals - vals.1)))
+
 before_long |>
   ggplot() +
   geom_density(aes(vals)) +
@@ -438,4 +435,3 @@ before_long |>
   facet_wrap(~vi)
 
 ```
-
