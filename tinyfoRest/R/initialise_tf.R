@@ -28,7 +28,7 @@ initialise_tf <- function(){
   Sys.setenv(RETICULATE_PYTHON = reticulate::virtualenv_python("tinyforest"))
   use_virtualenv("tinyforest")
 
-  py_install(c("earthengine-api", "geemap", "osdatahub", "OSGridConverter", "geedim", "plotly"), envname = "tinyforest")
+  py_install(c("earthengine-api", "geemap", "osdatahub", "OSGridConverter", "geedim", "plotly", "eemont"), envname = "tinyforest")
 
   ee <- import("ee")
   geemap <- import("geemap")
