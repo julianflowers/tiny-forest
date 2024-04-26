@@ -24,7 +24,7 @@ needs(tinyfoRest, sf, myScrapers, rvest)
 
 ```
 
-## What is the `tinyForestR` package?
+## What is the `tinyfoRest` package?
 
 The aim of `tinyfoRest` is to provide set of tools designed to extract, manipulate and analyse data relevant to the location of Tiny Forests in the UK.
 
