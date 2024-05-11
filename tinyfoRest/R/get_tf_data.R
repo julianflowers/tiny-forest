@@ -120,7 +120,7 @@ get_tf_data <- function(){
                trees = str_remove(trees, 'Species Planted in the Forest:')
 
         ) |>
-        dplyr::filter(trees !="NA", !is.na(plant_date, !is.na(lon)))
+        dplyr::filter(trees !="NA", !is.na(plant_date), !is.na(lon))
 
     tidy_tf_table <- tidy_tf_table |>
     mutate(site = as.numeric(tf_id)) |>
