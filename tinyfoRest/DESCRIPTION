@@ -1,12 +1,11 @@
 Package: tinyfoRest
-Title: What the Package Does (One Line, Title Case)
+Title: Get Biodiversity and Landcover/Landuse Data for Tiny Forest areas
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
+    person("Julian", "Flowers", , "julian.flowers12@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Description: tinyfoRest is an R package which is designed to help extract landcover and diversity data from user-defined areas around Tiny Forest locations. It creates a Tiny Forest database by scraping the EarthWatch website, extracts biodiversity data from the NBN atlas, and provides functions for extracting information from satellite images and OS landcover datasets.
+License: `use_gpl3_license()` 
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1

@@ -1,0 +1,34 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# tinyfoRest
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+tinyfoRest is an R package which is designed to help extract landcover and diversity data from user-defined areas around Tiny Forest locations. It creates a Tiny Forest database by scraping the EarthWatch website, extracts biodiversity data from the NBN atlas, and provides functions for extracting information from satellite images and OS landcover datasets.
+
+## Installation
+
+You can install the development version of tinyfoRest from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("julianflowers/tiny-forest/tinyfoRest")
+```
+
+
+
+
