@@ -1,0 +1,19 @@
+home:
+    title: "tinyfoRest"
+    description: "test"
+
+url: ~
+
+template:
+  bootstrap: 5
+
+navbar:
+   title: "tinyfoRest"
+   components:
+       - text: "Home"
+         href: index.html
+       - text: "Reference"
+         href: reference.html
+       - text: "Articles"
+         href: articles.html
+
